@@ -1,18 +1,22 @@
 package at.technikum_wien.mrp.service;
 
+import at.technikum_wien.mrp.dao.FavoriteRepositoryIF;
 import at.technikum_wien.mrp.dao.MediaRepository;
 import at.technikum_wien.mrp.dao.MediaRepositoryIF;
 import at.technikum_wien.mrp.model.MediaEntry;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 public class MediaService {
 
     private final MediaRepositoryIF mediaRepo;
+    private final FavoriteRepositoryIF favoriteRepo;
 
-    public MediaService(MediaRepositoryIF mediaRepo) {
+    public MediaService(MediaRepositoryIF mediaRepo, FavoriteRepositoryIF favoriteRepo) {
         this.mediaRepo = mediaRepo;
+        this.favoriteRepo = favoriteRepo;
     }
 
     public MediaEntry create(MediaEntry entry) {
@@ -52,5 +56,23 @@ public class MediaService {
             throw new SecurityException("not your media");
         }
         mediaRepo.delete(id);
+    }
+    public void addFavorite(int mediaId, int userId) {
+        if (mediaRepo.findById(mediaId).isEmpty()) {
+            throw new IllegalArgumentException("media not found");
+        }
+        favoriteRepo.addFavorite(userId, mediaId);
+    }
+    public void removeFavorite(int mediaId, int userId) {
+        favoriteRepo.removeFavorite(userId, mediaId);
+    }
+    public List<MediaEntry> getFavorites(int userId) {
+        List<Integer> mediaIds = favoriteRepo.findFavoritesByUserId(userId);
+
+        List<MediaEntry> favorites = new ArrayList<>();
+        for (int id : mediaIds) {
+            mediaRepo.findById(id).ifPresent(favorites::add);
+        }
+        return favorites;
     }
 }
