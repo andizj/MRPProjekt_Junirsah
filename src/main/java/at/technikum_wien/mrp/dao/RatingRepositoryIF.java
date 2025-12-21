@@ -5,6 +5,8 @@ import java.util.*;
 
 public interface RatingRepositoryIF {
     Rating save(Rating rating);
+    Optional<Rating> findById(int id);
     List<Rating> findByMediaId(int mediaId);
-    Optional<Rating> findByUserAndMedia(int userId, int mediaId);
+    List<Rating> findByUserId(int userId);
+    void delete(int id);
 }
