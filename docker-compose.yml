@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mrp_db
+    restart: always
+    # FIX HINZUGEFÜGT
+    platform: linux/amd64
+    environment:
+      POSTGRES_DB: mrpdb
+      POSTGRES_USER: mrp
+      POSTGRES_PASSWORD: mrp123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    # Image: Nutzt ein fertiges Java 17 JRE Image
+    image: eclipse-temurin:17-jre-alpine
+    container_name: mrp_api_server
+    restart: always
+    # FIX HINZUGEFÜGT
+    platform: linux/amd64
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+    volumes:
+      - .:/app
+
+    working_dir: /app
+
+    # Führt das JAR aus dem lokal kompilierten 'target'-Verzeichnis aus
+    command: ["java", "-jar", "target/MRPProjekt1-1.0-SNAPSHOT.jar"]
+
+volumes:
+  pgdata:
