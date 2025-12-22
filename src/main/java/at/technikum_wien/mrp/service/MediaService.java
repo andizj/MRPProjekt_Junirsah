@@ -34,6 +34,10 @@ public class MediaService {
         return mediaRepo.findAll();
     }
 
+    public List<MediaEntry> getFiltered(String search, String type, String genre, Integer year, Integer minAge, String sortBy){
+        return mediaRepo.findAll(search, type, genre, year, minAge, sortBy);
+    }
+
     public void update(MediaEntry entry, int requesterId) {
         Optional<MediaEntry> optionalExisting = mediaRepo.findById(entry.getId());
         if (optionalExisting.isEmpty()) {
