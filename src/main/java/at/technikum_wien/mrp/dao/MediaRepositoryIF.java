@@ -7,5 +7,6 @@ public interface MediaRepositoryIF {
     MediaEntry save(MediaEntry entry);
     Optional<MediaEntry> findById(int id);
     List<MediaEntry> findAll();
+    List<MediaEntry> findAll(String search, String type, String genre, Integer year, Integer minAge, String sortBy);
     void delete(int id);
 }
