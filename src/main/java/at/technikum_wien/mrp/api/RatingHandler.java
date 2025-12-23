@@ -49,6 +49,12 @@ public class RatingHandler implements HttpHandler {
                 return;
             }
 
+            // PUT /api/ratings/{id}/confirm
+            if (method.equals("PUT") && path.matches("/api/ratings/\\d+/confirm")) {
+                handleConfirm(ex);
+                return;
+            }
+
             // PUT /api/ratings/{id}
             if (method.equals("PUT") && path.matches("/api/ratings/\\d+")) {
                 handleUpdate(ex);
@@ -76,10 +82,7 @@ public class RatingHandler implements HttpHandler {
             return;
         }
 
-        // Wir lesen die mediaId direkt aus dem JSON Body, nicht aus der URL
         Rating r = mapper.readValue(ex.getRequestBody(), Rating.class);
-
-        // Kleine Validierung
         if (r.getMediaId() <= 0) {
             send(ex, 400, "{\"error\":\"mediaId missing\"}");
             return;
@@ -93,14 +96,31 @@ public class RatingHandler implements HttpHandler {
         send(ex, 201, mapper.writeValueAsString(saved));
     }
 
+    private void handleConfirm(HttpExchange ex) throws IOException {
+        Optional<User> user = getUser(ex);
+        if (user.isEmpty()) {
+            send(ex, 401, "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+
+        String path = ex.getRequestURI().getPath();
+        String idStr = path.replace("/confirm", "");
+        int ratingId = Integer.parseInt(idStr.substring(idStr.lastIndexOf('/') + 1));
+
+        try {
+            ratingService.confirmRating(ratingId, user.get().getId());
+            send(ex, 200, "{\"message\":\"Rating confirmed and now visible\"}");
+        } catch (SecurityException e) {
+            send(ex, 403, "{\"error\":\"Not your rating\"}");
+        } catch (IllegalArgumentException e) {
+            send(ex, 404, "{\"error\":\"Rating not found\"}");
+        }
+    }
+
     private void handleGetAverage(HttpExchange ex) throws IOException {
-        // ID aus URL extrahieren: /api/ratings/average/123 -> 123
         String path = ex.getRequestURI().getPath();
         int mediaId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
-
         double avg = ratingService.getAverageRating(mediaId);
-
-        // Gibt Zahl als String zurück
         send(ex, 200, String.valueOf(avg));
     }
 
@@ -110,7 +130,6 @@ public class RatingHandler implements HttpHandler {
             send(ex, 401, "{\"error\":\"Unauthorized\"}");
             return;
         }
-
         int ratingId = Integer.parseInt(ex.getRequestURI().getPath().replace("/api/ratings/", ""));
         Rating r = mapper.readValue(ex.getRequestBody(), Rating.class);
         r.setId(ratingId);
@@ -131,9 +150,7 @@ public class RatingHandler implements HttpHandler {
             send(ex, 401, "{\"error\":\"Unauthorized\"}");
             return;
         }
-
         int ratingId = Integer.parseInt(ex.getRequestURI().getPath().replace("/api/ratings/", ""));
-
         try {
             ratingService.deleteRating(ratingId, user.get().getId());
             send(ex, 204, "");

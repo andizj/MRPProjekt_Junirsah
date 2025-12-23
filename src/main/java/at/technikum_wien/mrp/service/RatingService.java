@@ -16,24 +16,44 @@ public class RatingService {
 
     public Rating addRating(Rating r, int userId) {
         r.setUserId(userId);
+        r.setVisible(false);
         return repo.save(r);
+    }
+
+    public void confirmRating(int ratingId, int userId) {
+        Optional<Rating> existing = repo.findById(ratingId);
+        if (existing.isEmpty()) {
+            throw new IllegalArgumentException("Rating not found");
+        }
+        Rating r = existing.get();
+
+        if (r.getUserId() != userId) {
+            throw new SecurityException("Not your rating");
+        }
+
+        r.setVisible(true);
+        repo.save(r);
     }
 
     public Rating updateRating(Rating r, int userId) {
         Optional<Rating> existing = repo.findById(r.getId());
 
-        if (existing.isEmpty()) throw new IllegalArgumentException("Rating existiert nicht");
-        if (existing.get().getUserId() != userId)
-            throw new SecurityException("Nicht dein Rating");
+        if (existing.isEmpty()) throw new IllegalArgumentException("Rating not found");
+        Rating oldRating = existing.get();
+
+        if (oldRating.getUserId() != userId)
+            throw new SecurityException("Not your rating");
+
+        r.setVisible(oldRating.isVisible());
 
         return repo.save(r);
     }
 
     public void deleteRating(int id, int userId) {
         Optional<Rating> existing = repo.findById(id);
-        if (existing.isEmpty()) throw new IllegalArgumentException("Rating existiert nicht");
+        if (existing.isEmpty()) throw new IllegalArgumentException("Rating not found");
         if (existing.get().getUserId() != userId)
-            throw new SecurityException("Nicht dein Rating");
+            throw new SecurityException("Not your rating");
 
         repo.delete(id);
     }
@@ -46,7 +66,6 @@ public class RatingService {
         return repo.findByUserId(userId);
     }
 
-    // NEU: Berechnet den Durchschnitt (1 bis 5 Sterne)
     public double getAverageRating(int mediaId) {
         List<Rating> ratings = repo.findByMediaId(mediaId);
         if (ratings.isEmpty()) {

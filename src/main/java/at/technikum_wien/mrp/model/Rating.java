@@ -15,5 +15,6 @@ public class Rating {
     private int userId;
     private int stars; // 1–5
     private String comment;
+    private boolean visible;
     private LocalDateTime createdAt;
 }
