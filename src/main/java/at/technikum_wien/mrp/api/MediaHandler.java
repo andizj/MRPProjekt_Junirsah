@@ -12,6 +12,9 @@ import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class MediaHandler implements HttpHandler {
@@ -23,101 +26,193 @@ public class MediaHandler implements HttpHandler {
     public MediaHandler(AuthService authService, MediaService mediaService) {
         this.authService = authService;
         this.mediaService = mediaService;
-
         this.mapper = new ObjectMapper();
         this.mapper.registerModule(new JavaTimeModule());
     }
 
     @Override
-    public void handle(HttpExchange ex) throws IOException {
-        String method = ex.getRequestMethod();
-        String path = ex.getRequestURI().getPath();
-        // /api/media or /api/media/{id}
+    public void handle(HttpExchange exchange) throws IOException {
+        setCORSHeaders(exchange);
+        if (exchange.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
         try {
-            if (method.equalsIgnoreCase("POST") && path.equals("/api/media")) {
-                handleCreate(ex);
-            } else if (method.equalsIgnoreCase("GET") && path.equals("/api/media")) {
-                handleGetAll(ex);
-            } else if (method.equalsIgnoreCase("GET") && path.matches("/api/media/\\d+")) {
-                handleGet(ex);
-            } else if (method.equalsIgnoreCase("PUT") && path.matches("/api/media/\\d+")) {
-                handleUpdate(ex);
-            } else if (method.equalsIgnoreCase("DELETE") && path.matches("/api/media/\\d+")) {
-                handleDelete(ex);
-            } else {
-                send(ex, 404, "{\"error\":\"unknown endpoint\"}");
+            String method = exchange.getRequestMethod();
+            String path = exchange.getRequestURI().getPath();
+
+            // GET /api/media (Alle oder Filter)
+            if (method.equalsIgnoreCase("GET") && (path.equals("/api/media") || path.equals("/api/media/"))) {
+                handleGetAllOrFilter(exchange);
+                return;
             }
+            // GET /api/media/{id}
+            if (method.equalsIgnoreCase("GET") && path.matches("/api/media/\\d+")) {
+                handleGetOne(exchange);
+                return;
+            }
+            // POST /api/media (Erstellen)
+            if (method.equalsIgnoreCase("POST") && (path.equals("/api/media") || path.equals("/api/media/"))) {
+                handleCreate(exchange);
+                return;
+            }
+            // PUT /api/media/{id} (Update)
+            if (method.equalsIgnoreCase("PUT") && path.matches("/api/media/\\d+")) {
+                handleUpdate(exchange);
+                return;
+            }
+            // DELETE /api/media/{id} (Löschen)
+            if (method.equalsIgnoreCase("DELETE") && path.matches("/api/media/\\d+")) {
+                handleDelete(exchange);
+                return;
+            }
+
+            send(exchange, 404, "{\"error\":\"Endpoint not found\"}");
+
         } catch (Exception e) {
             e.printStackTrace();
-            send(ex, 500, "{\"error\":\"server error\"}");
+            send(exchange, 500, "{\"error\":\"Internal Server Error\"}");
         }
     }
 
-    private void handleCreate(HttpExchange ex) throws IOException {
-        Optional<User> user = getUserFromHeader(ex);
-        if (user.isEmpty()) { send(ex, 401, "{\"error\":\"unauthorized\"}"); return; }
+    private void handleGetAllOrFilter(HttpExchange exchange) throws IOException {
+        Optional<User> user = getUserFromHeader(exchange);
+        if (user.isEmpty()) {
+            send(exchange, 401, "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+        Map<String, String> queryParams = getQueryMap(exchange.getRequestURI().getQuery());
 
-        MediaEntry entry = mapper.readValue(ex.getRequestBody(), MediaEntry.class);
-        entry.setCreatorId(user.get().getId());
-        MediaEntry saved = mediaService.create(entry);
-        send(ex, 201, mapper.writeValueAsString(saved));
+        String search = queryParams.get("search");
+        String type = queryParams.get("type");
+        String genre = queryParams.get("genre");
+        String sortBy = queryParams.get("sort");
+
+        Integer year = null;
+        if (queryParams.containsKey("year")) {
+            try { year = Integer.parseInt(queryParams.get("year")); } catch (NumberFormatException ignored) {}
+        }
+
+        Integer minAge = null;
+        if (queryParams.containsKey("minAge")) {
+            try { minAge = Integer.parseInt(queryParams.get("minAge")); } catch (NumberFormatException ignored) {}
+        }
+
+        List<MediaEntry> results = mediaService.getFiltered(search, type, genre, year, minAge, sortBy);
+
+        String json = mapper.writeValueAsString(results);
+        send(exchange, 200, json);
     }
 
-    private void handleGet(HttpExchange ex) throws IOException {
-        int id = Integer.parseInt(ex.getRequestURI().getPath().replace("/api/media/", ""));
-        Optional<MediaEntry> m = mediaService.getById(id);
-        if (m.isEmpty()) { send(ex, 404, "{\"error\":\"not found\"}"); return; }
-        send(ex, 200, mapper.writeValueAsString(m.get()));
+    private Map<String, String> getQueryMap(String query) {
+        Map<String, String> map = new HashMap<>();
+        if (query == null || query.isBlank()) {
+            return map;
+        }
+        String[] pairs = query.split("&");
+        for (String pair : pairs) {
+            String[] keyValue = pair.split("=");
+            if (keyValue.length > 1) {
+                map.put(keyValue[0], keyValue[1]);
+            } else if (keyValue.length == 1) {
+                map.put(keyValue[0], "");
+            }
+        }
+        return map;
     }
 
-    private void handleGetAll(HttpExchange ex) throws IOException {
-        send(ex, 200, mapper.writeValueAsString(mediaService.getAll()));
+    private void handleGetOne(HttpExchange exchange) throws IOException {
+        Optional<User> user = getUserFromHeader(exchange);
+        if (user.isEmpty()) {
+            send(exchange, 401, "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+        int id = getIdFromPath(exchange.getRequestURI().getPath());
+        Optional<MediaEntry> entry = mediaService.getById(id);
+        if (entry.isPresent()) {
+            send(exchange, 200, mapper.writeValueAsString(entry.get()));
+        } else {
+            send(exchange, 404, "{\"error\":\"Not found\"}");
+        }
     }
 
-    private void handleUpdate(HttpExchange ex) throws IOException {
-        Optional<User> user = getUserFromHeader(ex);
-        if (user.isEmpty()) { send(ex, 401, "{\"error\":\"unauthorized\"}"); return; }
-
-        int id = Integer.parseInt(ex.getRequestURI().getPath().replace("/api/media/", ""));
-        MediaEntry entry = mapper.readValue(ex.getRequestBody(), MediaEntry.class);
-        entry.setId(id);
+    private void handleCreate(HttpExchange exchange) throws IOException {
+        Optional<User> user = getUserFromHeader(exchange);
+        if (user.isEmpty()) {
+            send(exchange, 401, "{\"error\":\"Unauthorized\"}");
+            return;
+        }
         try {
-            mediaService.update(entry, user.get().getId());
-            send(ex, 200, mapper.writeValueAsString(entry));
-        } catch (SecurityException se) {
-            send(ex, 403, "{\"error\":\"not your media\"}");
-        } catch (IllegalArgumentException iae) {
-            send(ex, 404, "{\"error\":\"not found\"}");
+            MediaEntry input = mapper.readValue(exchange.getRequestBody(), MediaEntry.class);
+            // Creator ID setzen (vom eingeloggten User)
+            input.setCreatorId(user.get().getId());
+
+            MediaEntry created = mediaService.create(input);
+            send(exchange, 201, mapper.writeValueAsString(created));
+        } catch (IllegalArgumentException e) {
+            send(exchange, 400, "{\"error\":\"" + e.getMessage() + "\"}");
         }
     }
 
-    private void handleDelete(HttpExchange ex) throws IOException {
-        Optional<User> user = getUserFromHeader(ex);
-        if (user.isEmpty()) { send(ex, 401, "{\"error\":\"unauthorized\"}"); return; }
+    private void handleUpdate(HttpExchange exchange) throws IOException {
+        Optional<User> user = getUserFromHeader(exchange);
+        if (user.isEmpty()) {
+            send(exchange, 401, "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+        int id = getIdFromPath(exchange.getRequestURI().getPath());
+        try {
+            MediaEntry input = mapper.readValue(exchange.getRequestBody(), MediaEntry.class);
+            input.setId(id); // ID aus URL nehmen
+            mediaService.update(input, user.get().getId());
+            send(exchange, 200, mapper.writeValueAsString(input));
+        } catch (SecurityException e) {
+            send(exchange, 403, "{\"error\":\"Forbidden: Not your media\"}");
+        } catch (IllegalArgumentException e) {
+            send(exchange, 404, "{\"error\":\"Not found\"}");
+        }
+    }
 
-        int id = Integer.parseInt(ex.getRequestURI().getPath().replace("/api/media/", ""));
+    private void handleDelete(HttpExchange exchange) throws IOException {
+        Optional<User> user = getUserFromHeader(exchange);
+        if (user.isEmpty()) {
+            send(exchange, 401, "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+        int id = getIdFromPath(exchange.getRequestURI().getPath());
         try {
             mediaService.delete(id, user.get().getId());
-            send(ex, 204, "");
-        } catch (SecurityException se) {
-            send(ex, 403, "{\"error\":\"not your media\"}");
-        } catch (IllegalArgumentException iae) {
-            send(ex, 404, "{\"error\":\"not found\"}");
+            send(exchange, 204, "");
+        } catch (SecurityException e) {
+            send(exchange, 403, "{\"error\":\"Forbidden: Not your media\"}");
+        } catch (IllegalArgumentException e) {
+            send(exchange, 404, "{\"error\":\"Not found\"}");
         }
     }
 
-    private Optional<User> getUserFromHeader(HttpExchange ex) {
-        String header = ex.getRequestHeaders().getFirst("Authorization");
+    private int getIdFromPath(String path) {
+        return Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
+    }
+
+    private Optional<User> getUserFromHeader(HttpExchange exchange) {
+        String header = exchange.getRequestHeaders().getFirst("Authorization");
         if (header == null || !header.startsWith("Bearer ")) return Optional.empty();
         String token = header.substring("Bearer ".length());
         return authService.validateToken(token);
     }
 
-    private void send(HttpExchange ex, int code, String body) throws IOException {
+    private void setCORSHeaders(HttpExchange exchange) {
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    }
+
+    private void send(HttpExchange exchange, int code, String body) throws IOException {
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-        ex.getResponseHeaders().add("Content-Type", "application/json");
-        ex.sendResponseHeaders(code, bytes.length);
-        try (OutputStream os = ex.getResponseBody()) { os.write(bytes); }
+        exchange.getResponseHeaders().add("Content-Type", "application/json");
+        exchange.sendResponseHeaders(code, bytes.length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(bytes);
+        }
     }
 }
-
