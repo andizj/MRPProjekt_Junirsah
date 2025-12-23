@@ -45,4 +45,17 @@ public class RatingService {
     public List<Rating> getRatingsByUser(int userId) {
         return repo.findByUserId(userId);
     }
+
+    // NEU: Berechnet den Durchschnitt (1 bis 5 Sterne)
+    public double getAverageRating(int mediaId) {
+        List<Rating> ratings = repo.findByMediaId(mediaId);
+        if (ratings.isEmpty()) {
+            return 0.0;
+        }
+        double sum = 0;
+        for (Rating r : ratings) {
+            sum += r.getStars();
+        }
+        return sum / ratings.size();
+    }
 }

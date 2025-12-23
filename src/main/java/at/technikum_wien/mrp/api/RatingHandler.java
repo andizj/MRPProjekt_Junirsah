@@ -26,7 +26,6 @@ public class RatingHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange ex) throws IOException {
-
         enableCORS(ex);
 
         if (ex.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
@@ -38,10 +37,15 @@ public class RatingHandler implements HttpHandler {
         String method = ex.getRequestMethod();
 
         try {
-
-            // POST /api/media/{id}/rate
-            if (method.equals("POST") && path.matches("/api/media/\\d+/rate")) {
+            // POST /api/ratings
+            if (method.equals("POST") && (path.equals("/api/ratings") || path.equals("/api/ratings/"))) {
                 handleCreate(ex);
+                return;
+            }
+
+            // GET /api/ratings/average/{mediaId}
+            if (method.equals("GET") && path.matches("/api/ratings/average/\\d+")) {
+                handleGetAverage(ex);
                 return;
             }
 
@@ -72,12 +76,32 @@ public class RatingHandler implements HttpHandler {
             return;
         }
 
-        int mediaId = Integer.parseInt(ex.getRequestURI().getPath().replace("/api/media/", "").replace("/rate", ""));
+        // Wir lesen die mediaId direkt aus dem JSON Body, nicht aus der URL
         Rating r = mapper.readValue(ex.getRequestBody(), Rating.class);
-        r.setMediaId(mediaId);
+
+        // Kleine Validierung
+        if (r.getMediaId() <= 0) {
+            send(ex, 400, "{\"error\":\"mediaId missing\"}");
+            return;
+        }
+        if (r.getStars() < 1 || r.getStars() > 5) {
+            send(ex, 400, "{\"error\":\"stars must be 1-5\"}");
+            return;
+        }
 
         Rating saved = ratingService.addRating(r, user.get().getId());
         send(ex, 201, mapper.writeValueAsString(saved));
+    }
+
+    private void handleGetAverage(HttpExchange ex) throws IOException {
+        // ID aus URL extrahieren: /api/ratings/average/123 -> 123
+        String path = ex.getRequestURI().getPath();
+        int mediaId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
+
+        double avg = ratingService.getAverageRating(mediaId);
+
+        // Gibt Zahl als String zurück
+        send(ex, 200, String.valueOf(avg));
     }
 
     private void handleUpdate(HttpExchange ex) throws IOException {
@@ -129,7 +153,7 @@ public class RatingHandler implements HttpHandler {
 
     private void enableCORS(HttpExchange ex) {
         ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-        ex.getResponseHeaders().add("Access-Control-Allow-Methods", "*");
+        ex.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         ex.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
     }
 
