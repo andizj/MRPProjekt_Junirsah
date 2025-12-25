@@ -9,4 +9,8 @@ public interface RatingRepositoryIF {
     List<Rating> findByMediaId(int mediaId);
     List<Rating> findByUserId(int userId);
     void delete(int id);
+
+    void addLike(int userId, int ratingId);
+    void removeLike(int userId, int ratingId);
+    int countLikes(int ratingId);
 }

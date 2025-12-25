@@ -37,7 +37,6 @@ public class RatingService {
 
     public Rating updateRating(Rating r, int userId) {
         Optional<Rating> existing = repo.findById(r.getId());
-
         if (existing.isEmpty()) throw new IllegalArgumentException("Rating not found");
         Rating oldRating = existing.get();
 
@@ -45,7 +44,6 @@ public class RatingService {
             throw new SecurityException("Not your rating");
 
         r.setVisible(oldRating.isVisible());
-
         return repo.save(r);
     }
 
@@ -76,5 +74,24 @@ public class RatingService {
             sum += r.getStars();
         }
         return sum / ratings.size();
+    }
+
+    public void likeRating(int ratingId, int userId) {
+        // Prüfen, ob Rating existiert
+        Optional<Rating> r = repo.findById(ratingId);
+        if (r.isEmpty()) throw new IllegalArgumentException("Rating not found");
+
+        //Man darf nur sichtbare Ratings liken
+        if (!r.get().isVisible()) throw new IllegalArgumentException("Cannot like hidden rating");
+
+        repo.addLike(userId, ratingId);
+    }
+
+    public void unlikeRating(int ratingId, int userId) {
+        repo.removeLike(userId, ratingId);
+    }
+
+    public int getLikeCount(int ratingId) {
+        return repo.countLikes(ratingId);
     }
 }
