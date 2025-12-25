@@ -46,6 +46,11 @@ public class MediaHandler implements HttpHandler {
                 handleGetAllOrFilter(exchange);
                 return;
             }
+            // GET /api/media/recommendations
+            if (method.equalsIgnoreCase("GET") && (path.equals("/api/media/recommendations") || path.equals("/api/media/recommendations/"))) {
+                handleGetRecommendations(exchange);
+                return;
+            }
             // GET /api/media/{id}
             if (method.equalsIgnoreCase("GET") && path.matches("/api/media/\\d+")) {
                 handleGetOne(exchange);
@@ -102,6 +107,17 @@ public class MediaHandler implements HttpHandler {
 
         String json = mapper.writeValueAsString(results);
         send(exchange, 200, json);
+    }
+
+    private void handleGetRecommendations(HttpExchange exchange) throws IOException {
+        Optional<User> user = getUserFromHeader(exchange);
+        if (user.isEmpty()) {
+            send(exchange, 401, "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+
+        List<MediaEntry> recs = mediaService.getRecommendations(user.get().getId());
+        send(exchange, 200, mapper.writeValueAsString(recs));
     }
 
     private Map<String, String> getQueryMap(String query) {

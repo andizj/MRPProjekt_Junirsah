@@ -25,7 +25,7 @@ public class App {
         // Services
         UserService userService = new UserService(userRepo);
         AuthService authService = new AuthService(userRepo, tokenRepo);
-        MediaService mediaService = new MediaService(mediaRepo, favoriteRepo);
+        MediaService mediaService = new MediaService(mediaRepo, favoriteRepo, ratingRepo);
         RatingService ratingService = new RatingService(ratingRepo);
 
         // HTTP Server

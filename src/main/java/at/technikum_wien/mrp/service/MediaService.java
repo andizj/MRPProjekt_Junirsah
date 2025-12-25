@@ -3,20 +3,22 @@ package at.technikum_wien.mrp.service;
 import at.technikum_wien.mrp.dao.FavoriteRepositoryIF;
 import at.technikum_wien.mrp.dao.MediaRepository;
 import at.technikum_wien.mrp.dao.MediaRepositoryIF;
+import at.technikum_wien.mrp.dao.RatingRepositoryIF;
 import at.technikum_wien.mrp.model.MediaEntry;
+import at.technikum_wien.mrp.model.Rating;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class MediaService {
 
     private final MediaRepositoryIF mediaRepo;
     private final FavoriteRepositoryIF favoriteRepo;
+    private final RatingRepositoryIF ratingRepo;
 
-    public MediaService(MediaRepositoryIF mediaRepo, FavoriteRepositoryIF favoriteRepo) {
+    public MediaService(MediaRepositoryIF mediaRepo, FavoriteRepositoryIF favoriteRepo, RatingRepositoryIF ratingRepo) {
         this.mediaRepo = mediaRepo;
         this.favoriteRepo = favoriteRepo;
+        this.ratingRepo = ratingRepo;
     }
 
     public MediaEntry create(MediaEntry entry) {
@@ -78,5 +80,38 @@ public class MediaService {
             mediaRepo.findById(id).ifPresent(favorites::add);
         }
         return favorites;
+    }
+    //Neu
+    public List<MediaEntry> getRecommendations(int userId) {
+        List<Rating> userRatings = ratingRepo.findByUserId(userId);
+
+        Set<String> likedGenres = new HashSet<>();
+        Set<Integer> knownMediaIds = new HashSet<>();
+
+        for (Rating r : userRatings) {
+            knownMediaIds.add(r.getMediaId());
+
+            if (r.getStars() >= 4) {
+                Optional<MediaEntry> m = mediaRepo.findById(r.getMediaId());
+                if (m.isPresent()) {
+                    Collections.addAll(likedGenres, m.get().getGenres());
+                }
+            }
+        }
+
+        if (likedGenres.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<MediaEntry> candidates = mediaRepo.findByGenres(new ArrayList<>(likedGenres));
+
+        List<MediaEntry> recommendations = new ArrayList<>();
+        for (MediaEntry m : candidates) {
+            if (!knownMediaIds.contains(m.getId())) {
+                recommendations.add(m);
+            }
+        }
+
+        return recommendations;
     }
 }

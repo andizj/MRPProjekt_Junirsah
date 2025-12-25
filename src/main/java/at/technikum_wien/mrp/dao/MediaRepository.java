@@ -215,4 +215,30 @@ public class MediaRepository implements MediaRepositoryIF {
                 ts != null ? ts.toLocalDateTime() : null
         );
     }
+    @Override
+    public List<MediaEntry> findByGenres(List<String> genres) {
+        if (genres == null || genres.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        String sql = "SELECT * FROM media WHERE genres && ?";
+        List<MediaEntry> result = new ArrayList<>();
+
+        try (Connection conn = dbProvider.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            // Java List -> SQL Array konvertieren
+            Array sqlArray = conn.createArrayOf("text", genres.toArray());
+            ps.setArray(1, sqlArray);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(map(rs));
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error finding media by genres", e);
+        }
+        return result;
+    }
 }
