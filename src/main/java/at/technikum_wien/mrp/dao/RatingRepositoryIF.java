@@ -13,4 +13,7 @@ public interface RatingRepositoryIF {
     void addLike(int userId, int ratingId);
     void removeLike(int userId, int ratingId);
     int countLikes(int ratingId);
+
+    int countRatingsByUserId(int userId);
+    double getAverageRatingByUserId(int userId);
 }

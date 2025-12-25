@@ -175,4 +175,33 @@ public class RatingRepository implements RatingRepositoryIF {
                 ts != null ? ts.toLocalDateTime() : null
         );
     }
+    @Override
+    public int countRatingsByUserId(int userId) {
+        String sql = "SELECT COUNT(*) FROM ratings WHERE user_id = ?";
+        try (Connection conn = dbProvider.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return 0;
+    }
+
+    @Override
+    public double getAverageRatingByUserId(int userId) {
+        String sql = "SELECT AVG(stars) FROM ratings WHERE user_id = ?";
+        try (Connection conn = dbProvider.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getDouble(1);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return 0.0;
+    }
 }
