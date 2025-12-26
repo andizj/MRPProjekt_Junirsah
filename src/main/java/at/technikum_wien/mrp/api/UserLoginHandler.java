@@ -20,7 +20,15 @@ public class UserLoginHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+        String method = exchange.getRequestMethod();
+
+        if (method.equalsIgnoreCase("OPTIONS")) {
+            setCORSHeaders(exchange);
+            exchange.sendResponseHeaders(204, -1); // 204 No Content
+            return;
+        }
+
+        if (!"POST".equalsIgnoreCase(method)) {
             sendJson(exchange, 405, "{\"error\":\"method not allowed\"}");
             return;
         }
@@ -38,7 +46,15 @@ public class UserLoginHandler implements HttpHandler {
         }
     }
 
+    private void setCORSHeaders(HttpExchange exchange) {
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    }
+
     private void sendJson(HttpExchange exchange, int status, String body) throws IOException {
+        setCORSHeaders(exchange);
+
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().add("Content-Type", "application/json");
         exchange.sendResponseHeaders(status, bytes.length);
@@ -57,4 +73,3 @@ public class UserLoginHandler implements HttpHandler {
         public LoginResponse(String token) { this.token = token; }
     }
 }
-
