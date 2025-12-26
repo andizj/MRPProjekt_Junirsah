@@ -23,7 +23,7 @@ public class App {
         FavoriteRepositoryIF favoriteRepo = new FavoriteRepository(dbProvider);
 
         // Services
-        UserService userService = new UserService(userRepo);
+        UserService userService = new UserService(userRepo, ratingRepo, mediaRepo);
         AuthService authService = new AuthService(userRepo, tokenRepo);
         MediaService mediaService = new MediaService(mediaRepo, favoriteRepo, ratingRepo);
         RatingService ratingService = new RatingService(ratingRepo);
@@ -32,8 +32,11 @@ public class App {
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
         // USER
-        server.createContext("/api/users/register", new UserRegisterHandler(userService));
+        server.createContext("/api/users/register", new UserRegisterHandler(authService));
         server.createContext("/api/users/login", new UserLoginHandler(authService));
+
+        // NEU: Profil Route
+        server.createContext("/api/users/", new UserProfileHandler(userService, authService));
 
         // MEDIA
         server.createContext("/api/media", new MediaHandler(authService, mediaService));
