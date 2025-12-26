@@ -28,6 +28,7 @@ public class App {
         MediaService mediaService = new MediaService(mediaRepo, favoriteRepo, ratingRepo);
         RatingService ratingService = new RatingService(ratingRepo);
 
+
         // HTTP Server
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
@@ -35,7 +36,7 @@ public class App {
         server.createContext("/api/users/register", new UserRegisterHandler(authService));
         server.createContext("/api/users/login", new UserLoginHandler(authService));
 
-        // NEU: Profil Route
+        // Profil Route
         server.createContext("/api/users/", new UserProfileHandler(userService, authService));
 
         // MEDIA
@@ -49,6 +50,9 @@ public class App {
 
         // FAVORTIES
         server.createContext("/api/favorites", new FavoriteHandler(mediaService, authService));
+
+        // LEADERBOARD
+        server.createContext("/api/leaderboard", new LeaderboardHandler(ratingService));
 
         server.setExecutor(Executors.newFixedThreadPool(8));
         server.start();

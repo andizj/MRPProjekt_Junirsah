@@ -204,4 +204,34 @@ public class RatingRepository implements RatingRepositoryIF {
         }
         return 0.0;
     }
+    @Override
+    public List<at.technikum_wien.mrp.model.LeaderboardEntry> getLeaderboard() {
+        // SQL: Join ratings mit users, gruppiere nach User, zähle und sortiere absteigend
+        String sql = """
+            SELECT u.username, COUNT(r.id) as cnt
+            FROM ratings r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.visible = true
+            GROUP BY u.username
+            ORDER BY cnt DESC
+            LIMIT 10
+        """;
+
+        List<at.technikum_wien.mrp.model.LeaderboardEntry> list = new ArrayList<>();
+
+        try (Connection conn = dbProvider.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(new at.technikum_wien.mrp.model.LeaderboardEntry(
+                        rs.getString("username"),
+                        rs.getLong("cnt")
+                ));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error fetching leaderboard", e);
+        }
+        return list;
+    }
 }

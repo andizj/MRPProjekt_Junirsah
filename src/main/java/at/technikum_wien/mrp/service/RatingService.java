@@ -94,4 +94,8 @@ public class RatingService {
     public int getLikeCount(int ratingId) {
         return repo.countLikes(ratingId);
     }
+
+    public List<at.technikum_wien.mrp.model.LeaderboardEntry> getLeaderboard() {
+        return repo.getLeaderboard();
+    }
 }

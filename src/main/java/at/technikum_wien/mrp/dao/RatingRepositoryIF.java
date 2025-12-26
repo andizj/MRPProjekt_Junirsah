@@ -16,4 +16,6 @@ public interface RatingRepositoryIF {
 
     int countRatingsByUserId(int userId);
     double getAverageRatingByUserId(int userId);
+
+    List<at.technikum_wien.mrp.model.LeaderboardEntry> getLeaderboard();
 }
