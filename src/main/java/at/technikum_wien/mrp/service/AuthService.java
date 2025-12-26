@@ -1,8 +1,6 @@
 package at.technikum_wien.mrp.service;
 
 import at.technikum_wien.mrp.dao.TokenRepositoryIF;
-import at.technikum_wien.mrp.dao.UserRepository;
-import at.technikum_wien.mrp.dao.TokenRepository;
 import at.technikum_wien.mrp.dao.UserRepositoryIF;
 import at.technikum_wien.mrp.model.Token;
 import at.technikum_wien.mrp.model.User;
@@ -20,6 +18,20 @@ public class AuthService {
     public AuthService(UserRepositoryIF userRepo, TokenRepositoryIF tokenRepo) {
         this.userRepo = userRepo;
         this.tokenRepo = tokenRepo;
+    }
+
+    public User register(String username, String plainPassword) {
+        if (userRepo.existsByUsername(username)) {
+            throw new IllegalArgumentException("Username already taken.");
+        }
+
+        String hashed = BCrypt.hashpw(plainPassword, BCrypt.gensalt());
+
+        User newUser = new User();
+        newUser.setUsername(username);
+        newUser.setPasswordHash(hashed);
+
+        return userRepo.save(newUser);
     }
 
     public String login(String username, String plainPassword) {
