@@ -18,10 +18,12 @@ public class RatingHandler implements HttpHandler {
     private final RatingService ratingService;
     private final AuthService authService;
     private final ObjectMapper mapper = new ObjectMapper();
+    private final RatingActionHandler actionHandler;
 
     public RatingHandler(RatingService ratingService, AuthService authService) {
         this.ratingService = ratingService;
         this.authService = authService;
+        this.actionHandler = new RatingActionHandler(ratingService, authService);
     }
 
     @Override
@@ -34,6 +36,12 @@ public class RatingHandler implements HttpHandler {
         }
 
         String path = ex.getRequestURI().getPath();
+
+        if (path.endsWith("/like") || path.endsWith("/likes") || path.endsWith("/confirm")) {
+            actionHandler.handle(ex);
+            return; // Wichtig: Hier aufhören, der ActionHandler übernimmt den Rest
+        }
+
         String method = ex.getRequestMethod();
 
         try {
@@ -46,28 +54,6 @@ public class RatingHandler implements HttpHandler {
             // GET /api/ratings/average/{mediaId}
             if (method.equals("GET") && path.matches("/api/ratings/average/\\d+")) {
                 handleGetAverage(ex);
-                return;
-            }
-
-            // NEU: POST /api/ratings/{id}/like
-            if (method.equals("POST") && path.matches("/api/ratings/\\d+/like")) {
-                handleLike(ex);
-                return;
-            }
-            // NEU: DELETE /api/ratings/{id}/like
-            if (method.equals("DELETE") && path.matches("/api/ratings/\\d+/like")) {
-                handleUnlike(ex);
-                return;
-            }
-            // NEU: GET /api/ratings/{id}/likes (Count)
-            if (method.equals("GET") && path.matches("/api/ratings/\\d+/likes")) {
-                handleGetLikeCount(ex);
-                return;
-            }
-
-            // PUT /api/ratings/{id}/confirm
-            if (method.equals("PUT") && path.matches("/api/ratings/\\d+/confirm")) {
-                handleConfirm(ex);
                 return;
             }
 
@@ -111,47 +97,6 @@ public class RatingHandler implements HttpHandler {
         send(ex, 201, mapper.writeValueAsString(saved));
     }
 
-    private void handleConfirm(HttpExchange ex) throws IOException {
-        Optional<User> user = getUser(ex);
-        if (user.isEmpty()) { send(ex, 401, "{\"error\":\"Unauthorized\"}"); return; }
-
-        int ratingId = extractId(ex.getRequestURI().getPath(), "/confirm");
-        try {
-            ratingService.confirmRating(ratingId, user.get().getId());
-            send(ex, 200, "{\"message\":\"Rating confirmed\"}");
-        } catch (Exception e) {
-            send(ex, 400, "{\"error\":\"" + e.getMessage() + "\"}");
-        }
-    }
-    private void handleLike(HttpExchange ex) throws IOException {
-        Optional<User> user = getUser(ex);
-        if (user.isEmpty()) { send(ex, 401, "{\"error\":\"Unauthorized\"}"); return; }
-
-        int ratingId = extractId(ex.getRequestURI().getPath(), "/like");
-        try {
-            ratingService.likeRating(ratingId, user.get().getId());
-            send(ex, 200, "{\"message\":\"Liked\"}");
-        } catch (IllegalArgumentException e) {
-            send(ex, 404, "{\"error\":\"Rating not found\"}");
-        }
-    }
-
-    private void handleUnlike(HttpExchange ex) throws IOException {
-        Optional<User> user = getUser(ex);
-        if (user.isEmpty()) { send(ex, 401, "{\"error\":\"Unauthorized\"}"); return; }
-
-        int ratingId = extractId(ex.getRequestURI().getPath(), "/like");
-        ratingService.unlikeRating(ratingId, user.get().getId());
-        send(ex, 200, "{\"message\":\"Unliked\"}");
-    }
-
-    private void handleGetLikeCount(HttpExchange ex) throws IOException {
-        // Keine Auth nötig, um Likes zu zählen (öffentliche Info)
-        int ratingId = extractId(ex.getRequestURI().getPath(), "/likes");
-        int count = ratingService.getLikeCount(ratingId);
-        send(ex, 200, "{\"count\":" + count + "}");
-    }
-
     private void handleGetAverage(HttpExchange ex) throws IOException {
         String path = ex.getRequestURI().getPath();
         int mediaId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
@@ -165,7 +110,7 @@ public class RatingHandler implements HttpHandler {
             send(ex, 401, "{\"error\":\"Unauthorized\"}");
             return;
         }
-        int ratingId = Integer.parseInt(ex.getRequestURI().getPath().replace("/api/ratings/", ""));
+        int ratingId = extractId(ex.getRequestURI().getPath());
         Rating r = mapper.readValue(ex.getRequestBody(), Rating.class);
         r.setId(ratingId);
         try {
@@ -194,9 +139,9 @@ public class RatingHandler implements HttpHandler {
             send(ex, 404, "{\"error\":\"Rating not found\"}");
         }
     }
-    private int extractId(String path, String suffix) {
-        String s = path.replace(suffix, ""); // Schneidet hinten ab
-        return Integer.parseInt(s.substring(s.lastIndexOf('/') + 1));
+
+    private int extractId(String path) {
+        return Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
     }
 
     private Optional<User> getUser(HttpExchange ex) {

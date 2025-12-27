@@ -9,9 +9,9 @@ import java.util.List;
 
 public class FavoriteRepository implements FavoriteRepositoryIF {
 
-    private final DatabaseConnection dbProvider;
+    private final DatabaseConnectionIF dbProvider;
 
-    public FavoriteRepository(DatabaseConnection dbProvider) {
+    public FavoriteRepository(DatabaseConnectionIF dbProvider) {
         this.dbProvider = dbProvider;
     }
 

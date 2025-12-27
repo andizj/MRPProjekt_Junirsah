@@ -9,9 +9,9 @@ import java.util.Optional;
 
 public class RatingRepository implements RatingRepositoryIF {
 
-    private final DatabaseConnection dbProvider;
+    private final DatabaseConnectionIF dbProvider;
 
-    public RatingRepository(DatabaseConnection dbProvider) {
+    public RatingRepository(DatabaseConnectionIF dbProvider) {
         this.dbProvider = dbProvider;
     }
 

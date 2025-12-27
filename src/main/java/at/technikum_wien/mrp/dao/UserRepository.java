@@ -7,9 +7,9 @@ import java.util.Optional;
 
 public class UserRepository implements UserRepositoryIF {
 
-    private final DatabaseConnection dbProvider;
+    private final DatabaseConnectionIF dbProvider;
 
-    public UserRepository(DatabaseConnection dbProvider) {
+    public UserRepository(DatabaseConnectionIF dbProvider) {
         this.dbProvider = dbProvider;
     }
 

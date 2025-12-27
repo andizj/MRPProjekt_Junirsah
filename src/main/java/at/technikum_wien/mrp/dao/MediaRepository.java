@@ -9,9 +9,9 @@ import java.util.*;
 
 public class MediaRepository implements MediaRepositoryIF {
 
-    private final DatabaseConnection dbProvider;
+    private final DatabaseConnectionIF dbProvider;
 
-    public MediaRepository(DatabaseConnection dbProvider) {
+    public MediaRepository(DatabaseConnectionIF dbProvider) {
         this.dbProvider = dbProvider;
     }
 
