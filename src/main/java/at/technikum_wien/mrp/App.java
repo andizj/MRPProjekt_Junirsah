@@ -13,7 +13,7 @@ public class App {
     public static void main(String[] args) throws IOException {
 
         // DB Provider
-        DatabaseConnection dbProvider = new DatabaseConnection();
+        DatabaseConnectionIF dbProvider = new DatabaseConnection();
 
         // Repositories
         UserRepositoryIF userRepo = new UserRepository(dbProvider);
@@ -45,8 +45,8 @@ public class App {
 
         // RATINGS
         //server.createContext("/api/media/", new RatingHandler(ratingService, authService)); // wichtig für /api/media/{id}/rate
-        server.createContext("/api/ratings", new RatingHandler(ratingService, authService));
-        server.createContext("/api/ratings/", new RatingHandler(ratingService, authService));
+        server.createContext("/api/ratings", new RatingCRUDHandler(ratingService, authService));
+        server.createContext("/api/ratings/", new RatingCRUDHandler(ratingService, authService));
 
         // FAVORTIES
         server.createContext("/api/favorites", new FavoriteHandler(mediaService, authService));
