@@ -52,7 +52,7 @@ public class App {
         server.createContext("/api/favorites", new FavoriteHandler(mediaService, authService));
 
         // LEADERBOARD
-        server.createContext("/api/leaderboard", new LeaderboardHandler(ratingService));
+        server.createContext("/api/leaderboard", new LeaderboardHandler(ratingService, authService));
 
         server.setExecutor(Executors.newFixedThreadPool(8));
         server.start();

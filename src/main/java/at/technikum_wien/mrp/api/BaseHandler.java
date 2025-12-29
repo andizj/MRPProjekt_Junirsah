@@ -73,4 +73,21 @@ public abstract class BaseHandler implements HttpHandler {
         }
         return false;
     }
+
+    protected java.util.Map<String, String> getQueryMap(String query) {
+        java.util.Map<String, String> map = new java.util.HashMap<>();
+        if (query == null || query.isBlank()) {
+            return map;
+        }
+        String[] pairs = query.split("&");
+        for (String pair : pairs) {
+            String[] keyValue = pair.split("=");
+            if (keyValue.length > 1) {
+                map.put(keyValue[0], keyValue[1]);
+            } else if (keyValue.length == 1) {
+                map.put(keyValue[0], "");
+            }
+        }
+        return map;
+    }
 }
