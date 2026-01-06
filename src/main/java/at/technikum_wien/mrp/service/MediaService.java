@@ -1,9 +1,8 @@
 package at.technikum_wien.mrp.service;
 
-import at.technikum_wien.mrp.dao.FavoriteRepositoryIF;
-import at.technikum_wien.mrp.dao.MediaRepository;
-import at.technikum_wien.mrp.dao.MediaRepositoryIF;
-import at.technikum_wien.mrp.dao.RatingRepositoryIF;
+import at.technikum_wien.mrp.dao.interfaces.FavoriteRepositoryIF;
+import at.technikum_wien.mrp.dao.interfaces.MediaRepositoryIF;
+import at.technikum_wien.mrp.dao.interfaces.RatingRepositoryIF;
 import at.technikum_wien.mrp.model.MediaEntry;
 import at.technikum_wien.mrp.model.Rating;
 
@@ -21,10 +20,38 @@ public class MediaService {
         this.ratingRepo = ratingRepo;
     }
 
+    private void validate(MediaEntry entry) {
+        if (entry.getTitle() == null || entry.getTitle().isBlank()) {
+            throw new IllegalArgumentException("Title required");
+        }
+        if (entry.getReleaseYear() < 1800) {
+            throw new IllegalArgumentException("Invalid release year (must be >= 1800)");
+        }
+        if (entry.getReleaseYear() > java.time.Year.now().getValue() + 10) {
+            throw new IllegalArgumentException("Release year too far in the future");
+        }
+        if (entry.getAgeRestriction() < 0) {
+            throw new IllegalArgumentException("Age restriction cannot be negative");
+        }
+        List<String> validTypes = List.of("MOVIE", "SERIES", "GAME");
+        if (entry.getMediaType() == null || !validTypes.contains(entry.getMediaType().toUpperCase())) {
+            throw new IllegalArgumentException("Invalid media type. Allowed: MOVIE, SERIES, GAME");
+        }
+        if (entry.getGenres() == null || entry.getGenres().length == 0) {
+            throw new IllegalArgumentException("At least one genre is required");
+        }
+        for (String g : entry.getGenres()) {
+            if (g == null || g.isBlank()) {
+                throw new IllegalArgumentException("Genre cannot be empty");
+            }
+        }
+    }
+
     public MediaEntry create(MediaEntry entry) {
         if (entry.getTitle() == null || entry.getTitle().isBlank()) {
             throw new IllegalArgumentException("title required");
         }
+        validate(entry);
         return mediaRepo.save(entry);
     }
 
@@ -49,6 +76,10 @@ public class MediaService {
         if (existing.getCreatorId() != requesterId) {
             throw new SecurityException("not your media");
         }
+        validate(entry);
+        entry.setCreatorId(existing.getCreatorId());
+
+        entry.setCreatedAt(existing.getCreatedAt());
         mediaRepo.save(entry);
     }
 
@@ -70,6 +101,9 @@ public class MediaService {
         favoriteRepo.addFavorite(userId, mediaId);
     }
     public void removeFavorite(int mediaId, int userId) {
+        if (mediaRepo.findById(mediaId).isEmpty()) {
+            throw new IllegalArgumentException("media not found");
+        }
         favoriteRepo.removeFavorite(userId, mediaId);
     }
     public List<MediaEntry> getFavorites(int userId) {
@@ -81,7 +115,6 @@ public class MediaService {
         }
         return favorites;
     }
-    //Neu
     public List<MediaEntry> getRecommendations(int userId) {
         List<Rating> userRatings = ratingRepo.findByUserId(userId);
 
