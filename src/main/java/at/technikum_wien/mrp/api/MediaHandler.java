@@ -1,9 +1,11 @@
 package at.technikum_wien.mrp.api;
 
 import at.technikum_wien.mrp.model.MediaEntry;
+import at.technikum_wien.mrp.model.Rating;
 import at.technikum_wien.mrp.model.User;
 import at.technikum_wien.mrp.service.AuthService;
 import at.technikum_wien.mrp.service.MediaService;
+import at.technikum_wien.mrp.service.RatingService;
 import com.sun.net.httpserver.HttpExchange;
 
 import java.io.IOException;
@@ -14,16 +16,16 @@ import java.util.Optional;
 public class MediaHandler extends BaseHandler { // 1. Erben
 
     private final MediaService mediaService;
-    // authService und mapper kommen aus BaseHandler
+    private final RatingService ratingService;
 
-    public MediaHandler(AuthService authService, MediaService mediaService) {
-        super(authService); // 2. Super-Konstruktor
+    public MediaHandler(AuthService authService, MediaService mediaService, RatingService ratingService) {
+        super(authService);
         this.mediaService = mediaService;
+        this.ratingService = ratingService;
     }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        // 3. Preflight Check
         if (isOptionsRequest(exchange)) return;
 
         try {
@@ -61,6 +63,11 @@ public class MediaHandler extends BaseHandler { // 1. Erben
                 return;
             }
 
+            if (method.equalsIgnoreCase("POST") && path.matches("/api/media/\\d+/rate")) {
+                handleRateMedia(exchange);
+                return;
+            }
+
             send(exchange, 404, "{\"error\":\"Endpoint not found\"}");
 
         } catch (Exception e) {
@@ -70,7 +77,7 @@ public class MediaHandler extends BaseHandler { // 1. Erben
     }
 
     private void handleGetAllOrFilter(HttpExchange exchange) throws IOException {
-        Optional<User> user = getUser(exchange); // BaseHandler Methode
+        Optional<User> user = getUser(exchange);
         if (user.isEmpty()) {
             send(exchange, 401, "{\"error\":\"Unauthorized\"}");
             return;
@@ -113,7 +120,7 @@ public class MediaHandler extends BaseHandler { // 1. Erben
             send(exchange, 401, "{\"error\":\"Unauthorized\"}");
             return;
         }
-        int id = extractId(exchange.getRequestURI().getPath()); // BaseHandler Methode!
+        int id = extractId(exchange.getRequestURI().getPath());
         Optional<MediaEntry> entry = mediaService.getById(id);
         if (entry.isPresent()) {
             send(exchange, 200, mapper.writeValueAsString(entry.get()));
@@ -171,6 +178,35 @@ public class MediaHandler extends BaseHandler { // 1. Erben
             send(exchange, 403, "{\"error\":\"Forbidden: Not your media\"}");
         } catch (IllegalArgumentException e) {
             send(exchange, 404, "{\"error\":\"Not found\"}");
+        }
+    }
+
+    private void handleRateMedia(HttpExchange exchange) throws IOException {
+
+        Optional<User> user = getUser(exchange);
+        if (user.isEmpty()) {
+            send(exchange, 401, "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+
+        int mediaId = extractId(exchange.getRequestURI().getPath(), "/rate");
+
+        try {
+            Rating r = mapper.readValue(exchange.getRequestBody(), Rating.class);
+
+            r.setMediaId(mediaId);
+
+            if (r.getStars() < 1 || r.getStars() > 5) {
+                send(exchange, 400, "{\"error\":\"Stars must be 1-5\"}");
+                return;
+            }
+
+            Rating saved = ratingService.addRating(r, user.get().getId());
+
+            send(exchange, 201, mapper.writeValueAsString(saved));
+
+        } catch (IllegalArgumentException e) {
+            send(exchange, 400, "{\"error\":\"" + e.getMessage() + "\"}");
         }
     }
 }

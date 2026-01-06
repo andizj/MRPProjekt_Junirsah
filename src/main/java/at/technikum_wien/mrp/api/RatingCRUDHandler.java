@@ -15,19 +15,17 @@ public class RatingCRUDHandler extends BaseHandler {
     private final RatingActionHandler actionHandler;
 
     public RatingCRUDHandler(RatingService ratingService, AuthService authService) {
-        super(authService); // 2. SUPER() AUFRUFEN
+        super(authService);
         this.ratingService = ratingService;
         this.actionHandler = new RatingActionHandler(ratingService, authService);
     }
 
     @Override
     public void handle(HttpExchange ex) throws IOException {
-        // 3. Helper nutzen
         if (isOptionsRequest(ex)) return;
 
         String path = ex.getRequestURI().getPath();
 
-        // Dispatcher -> ActionHandler
         if (path.endsWith("/like") || path.endsWith("/likes") || path.endsWith("/confirm")) {
             actionHandler.handle(ex);
             return;
@@ -36,10 +34,6 @@ public class RatingCRUDHandler extends BaseHandler {
         String method = ex.getRequestMethod();
 
         try {
-            if (method.equals("POST") && (path.equals("/api/ratings") || path.equals("/api/ratings/"))) {
-                handleCreate(ex);
-                return;
-            }
             if (method.equals("GET") && path.matches("/api/ratings/average/\\d+")) {
                 handleGetAverage(ex);
                 return;
@@ -58,26 +52,6 @@ public class RatingCRUDHandler extends BaseHandler {
             e.printStackTrace();
             send(ex, 500, "{\"error\":\"Server error\"}");
         }
-    }
-
-    private void handleCreate(HttpExchange ex) throws IOException {
-        Optional<User> user = getUser(ex); // Kommt jetzt aus BaseHandler
-        if (user.isEmpty()) {
-            send(ex, 401, "{\"error\":\"Unauthorized\"}");
-            return;
-        }
-        Rating r = mapper.readValue(ex.getRequestBody(), Rating.class); // mapper aus BaseHandler
-        if (r.getMediaId() <= 0) {
-            send(ex, 400, "{\"error\":\"mediaId missing\"}");
-            return;
-        }
-        if (r.getStars() < 1 || r.getStars() > 5) {
-            send(ex, 400, "{\"error\":\"stars must be 1-5\"}");
-            return;
-        }
-
-        Rating saved = ratingService.addRating(r, user.get().getId());
-        send(ex, 201, mapper.writeValueAsString(saved));
     }
 
     private void handleGetAverage(HttpExchange ex) throws IOException {
@@ -114,7 +88,7 @@ public class RatingCRUDHandler extends BaseHandler {
         int ratingId = extractId(ex.getRequestURI().getPath());
         try {
             ratingService.deleteRating(ratingId, user.get().getId());
-            send(ex, 204); // 204 No Content
+            send(ex, 204);
         } catch (SecurityException se) {
             send(ex, 403, "{\"error\":\"Not your rating\"}");
         } catch (IllegalArgumentException iae) {
