@@ -1,4 +1,4 @@
-package at.technikum_wien.mrp.dao;
+package at.technikum_wien.mrp.dao.interfaces;
 
 import java.util.List;
 

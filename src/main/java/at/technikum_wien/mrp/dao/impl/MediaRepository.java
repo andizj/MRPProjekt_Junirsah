@@ -1,8 +1,9 @@
-package at.technikum_wien.mrp.dao;
+package at.technikum_wien.mrp.dao.impl;
 
+import at.technikum_wien.mrp.dao.interfaces.MediaRepositoryIF;
+import at.technikum_wien.mrp.database.DatabaseConnectionIF;
 import at.technikum_wien.mrp.model.MediaEntry;
 
-import javax.sql.DataSource;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -122,46 +123,39 @@ public class MediaRepository implements MediaRepositoryIF {
         StringBuilder sql = new StringBuilder("SELECT * FROM media WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
-        // 1. Suche nach Titel (Case Insensitive)
         if (search != null && !search.isBlank()) {
             sql.append(" AND title ILIKE ?");
             params.add("%" + search + "%");
         }
-        // 2. Filter nach Typ (MOVIE, SERIES, GAME)
         if (type != null && !type.isBlank()) {
             sql.append(" AND media_type = ?");
             params.add(type);
         }
-        // 3. Filter nach Jahr
         if (year != null) {
             sql.append(" AND release_year = ?");
             params.add(year);
         }
-        // 4. Filter nach Altersfreigabe (mindestens X Jahre)
         if (minAge != null) {
             sql.append(" AND age_restriction >= ?");
             params.add(minAge);
         }
-        // 5. Filter nach Genre
         if (genre != null && !genre.isBlank()) {
             sql.append(" AND ? = ANY(genres)");
             params.add(genre);
         }
 
-        // 6. Sortierung
         if ("year".equalsIgnoreCase(sortBy)) {
             sql.append(" ORDER BY release_year DESC");
         } else if ("title".equalsIgnoreCase(sortBy)) {
             sql.append(" ORDER BY title ASC");
         } else {
-            sql.append(" ORDER BY id ASC"); // Default
+            sql.append(" ORDER BY id ASC");
         }
 
         List<MediaEntry> result = new ArrayList<>();
         try (Connection conn = dbProvider.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql.toString())) {
 
-            // Parameter setzen
             for (int i = 0; i < params.size(); i++) {
                 Object p = params.get(i);
                 if (p instanceof Integer) {
@@ -227,7 +221,6 @@ public class MediaRepository implements MediaRepositoryIF {
         try (Connection conn = dbProvider.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            // Java List -> SQL Array konvertieren
             Array sqlArray = conn.createArrayOf("text", genres.toArray());
             ps.setArray(1, sqlArray);
 

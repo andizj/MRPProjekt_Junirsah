@@ -1,8 +1,9 @@
-package at.technikum_wien.mrp.dao;
+package at.technikum_wien.mrp.dao.impl;
 
+import at.technikum_wien.mrp.dao.interfaces.UserRepositoryIF;
+import at.technikum_wien.mrp.database.DatabaseConnectionIF;
 import at.technikum_wien.mrp.model.User;
 import java.sql.*;
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 public class UserRepository implements UserRepositoryIF {
@@ -15,18 +16,27 @@ public class UserRepository implements UserRepositoryIF {
 
     @Override
     public User save(User user) {
-        String sql = "INSERT INTO users (username, password_hash) VALUES (?, ?) RETURNING id, created_at";
+        if (user.getId() > 0) {
+            return update(user);
+        } else {
+            return insert(user);
+        }
+    }
+
+    private User insert(User user) {
+        String sql = "INSERT INTO users (username, password_hash, email, favorite_genre) VALUES (?, ?, ?, ?) RETURNING id, created_at";
 
         try (Connection conn = dbProvider.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, user.getUsername());
             ps.setString(2, user.getPasswordHash());
+            ps.setString(3, user.getEmail());
+            ps.setString(4, user.getFavoriteGenre());
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     user.setId(rs.getInt("id"));
-
                     Timestamp ts = rs.getTimestamp("created_at");
                     if (ts != null) {
                         user.setCreatedAt(ts.toLocalDateTime());
@@ -35,7 +45,30 @@ public class UserRepository implements UserRepositoryIF {
             }
             return user;
         } catch (SQLException e) {
-            throw new RuntimeException("Error saving user", e);
+            throw new RuntimeException("Error saving new user", e);
+        }
+    }
+
+    private User update(User user) {
+        String sql = "UPDATE users SET username = ?, email = ?, favorite_genre = ? WHERE id = ?";
+
+        try (Connection conn = dbProvider.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, user.getUsername());
+            ps.setString(2, user.getEmail());
+            ps.setString(3, user.getFavoriteGenre());
+
+            ps.setInt(4, user.getId());
+
+            int rowsAffected = ps.executeUpdate();
+            if (rowsAffected == 0) {
+                throw new RuntimeException("Update failed: User with ID " + user.getId() + " not found.");
+            }
+
+            return user;
+        } catch (SQLException e) {
+            throw new RuntimeException("Error updating user", e);
         }
     }
 
@@ -88,8 +121,9 @@ public class UserRepository implements UserRepositoryIF {
         User user = new User();
         user.setId(rs.getInt("id"));
         user.setUsername(rs.getString("username"));
-
         user.setPasswordHash(rs.getString("password_hash"));
+        user.setEmail(rs.getString("email"));
+        user.setFavoriteGenre(rs.getString("favorite_genre"));
 
         Timestamp ts = rs.getTimestamp("created_at");
         if (ts != null) {

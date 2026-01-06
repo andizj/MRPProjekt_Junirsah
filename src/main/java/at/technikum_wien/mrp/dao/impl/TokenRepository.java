@@ -1,5 +1,6 @@
-package at.technikum_wien.mrp.dao;
+package at.technikum_wien.mrp.dao.impl;
 
+import at.technikum_wien.mrp.dao.interfaces.TokenRepositoryIF;
 import at.technikum_wien.mrp.model.Token;
 import java.util.*;
 

@@ -1,5 +1,7 @@
-package at.technikum_wien.mrp.dao;
+package at.technikum_wien.mrp.dao.impl;
 
+import at.technikum_wien.mrp.dao.interfaces.RatingRepositoryIF;
+import at.technikum_wien.mrp.database.DatabaseConnectionIF;
 import at.technikum_wien.mrp.model.Rating;
 import java.sql.*;
 import java.time.LocalDateTime;
@@ -206,7 +208,6 @@ public class RatingRepository implements RatingRepositoryIF {
     }
     @Override
     public List<at.technikum_wien.mrp.model.LeaderboardEntry> getLeaderboard() {
-        // SQL: Join ratings mit users, gruppiere nach User, zähle und sortiere absteigend
         String sql = """
             SELECT u.username, COUNT(r.id) as cnt
             FROM ratings r

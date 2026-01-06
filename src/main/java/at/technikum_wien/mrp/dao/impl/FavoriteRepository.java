@@ -1,4 +1,7 @@
-package at.technikum_wien.mrp.dao;
+package at.technikum_wien.mrp.dao.impl;
+
+import at.technikum_wien.mrp.dao.interfaces.FavoriteRepositoryIF;
+import at.technikum_wien.mrp.database.DatabaseConnectionIF;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -17,7 +20,6 @@ public class FavoriteRepository implements FavoriteRepositoryIF {
 
     @Override
     public void addFavorite(int userId, int mediaId) {
-        // ON CONFLICT DO NOTHING verhindert Fehler, wenn der Eintrag schon existiert
         String sql = "INSERT INTO favorites (user_id, media_id) VALUES (?, ?) ON CONFLICT DO NOTHING";
         try (Connection conn = dbProvider.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

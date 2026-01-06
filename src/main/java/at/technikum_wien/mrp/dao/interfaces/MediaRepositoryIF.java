@@ -1,4 +1,4 @@
-package at.technikum_wien.mrp.dao;
+package at.technikum_wien.mrp.dao.interfaces;
 
 import at.technikum_wien.mrp.model.MediaEntry;
 import java.util.*;

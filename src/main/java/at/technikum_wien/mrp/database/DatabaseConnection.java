@@ -9,8 +9,7 @@ public class DatabaseConnection implements DatabaseConnectionIF {
     private final String URL;
     private final String USER;
     private final String PASSWORD;
-    // TRUNCATE TABLE media RESTART IDENTITY;
-    // um datenbank neuzustarten
+
     public DatabaseConnection() {
         this.URL = "jdbc:postgresql://localhost:5432/mrpdb";
         this.USER = "mrp";
