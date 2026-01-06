@@ -14,4 +14,6 @@ public class User {
     private String username;
     private String passwordHash;
     private LocalDateTime createdAt;
+    private String email;
+    private String favoriteGenre;
 }

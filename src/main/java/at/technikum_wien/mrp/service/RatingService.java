@@ -1,6 +1,6 @@
 package at.technikum_wien.mrp.service;
 
-import at.technikum_wien.mrp.dao.RatingRepositoryIF;
+import at.technikum_wien.mrp.dao.interfaces.RatingRepositoryIF;
 import at.technikum_wien.mrp.model.Rating;
 
 import java.util.List;
@@ -77,11 +77,9 @@ public class RatingService {
     }
 
     public void likeRating(int ratingId, int userId) {
-        // Prüfen, ob Rating existiert
         Optional<Rating> r = repo.findById(ratingId);
         if (r.isEmpty()) throw new IllegalArgumentException("Rating not found");
 
-        //Man darf nur sichtbare Ratings liken
         if (!r.get().isVisible()) throw new IllegalArgumentException("Cannot like hidden rating");
 
         repo.addLike(userId, ratingId);

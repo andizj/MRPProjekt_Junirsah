@@ -1,4 +1,4 @@
-package at.technikum_wien.mrp.dao;
+package at.technikum_wien.mrp.database;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

@@ -1,7 +1,7 @@
 package at.technikum_wien.mrp.service;
 
-import at.technikum_wien.mrp.dao.TokenRepositoryIF;
-import at.technikum_wien.mrp.dao.UserRepositoryIF;
+import at.technikum_wien.mrp.dao.interfaces.TokenRepositoryIF;
+import at.technikum_wien.mrp.dao.interfaces.UserRepositoryIF;
 import at.technikum_wien.mrp.model.Token;
 import at.technikum_wien.mrp.model.User;
 import org.mindrot.jbcrypt.BCrypt;

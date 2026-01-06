@@ -19,25 +19,23 @@ public class RatingActionHandler extends BaseHandler {
 
     @Override
     public void handle(HttpExchange ex) throws IOException {
-        // Hier kein isOptionsRequest nötig, das macht der CRUDHandler schon beim Dispatching
-        // oder man lässt es sicherheitshalber drin.
         String method = ex.getRequestMethod();
         String path = ex.getRequestURI().getPath();
 
         try {
-            if (method.equals("POST") && path.endsWith("/like")) {
+            if (method.equals("POST") && path.matches("/api/ratings/\\d+/like")) {
                 handleLike(ex);
                 return;
             }
-            if (method.equals("DELETE") && path.endsWith("/like")) {
+            if (method.equals("DELETE") && path.matches("/api/ratings/\\d+/like")) {
                 handleUnlike(ex);
                 return;
             }
-            if (method.equals("GET") && path.endsWith("/likes")) {
+            if (method.equals("GET") && path.matches("/api/ratings/\\d+/likes")) {
                 handleGetLikeCount(ex);
                 return;
             }
-            if (method.equals("PUT") && path.endsWith("/confirm")) {
+            if (method.equals("PUT") && path.matches("/api/ratings/\\d+/confirm")) {
                 handleConfirm(ex);
                 return;
             }

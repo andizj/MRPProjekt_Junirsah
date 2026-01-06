@@ -34,7 +34,11 @@ public class UserRegisterHandler extends BaseHandler {
             send(exchange, 201, json);
 
         } catch (IllegalArgumentException e) {
-            send(exchange, 400, "{\"error\":\"" + e.getMessage() + "\"}");
+            if ("Username already taken.".equals(e.getMessage())) {
+                send(exchange, 409, "{\"error\":\"" + e.getMessage() + "\"}");
+            } else {
+                send(exchange, 400, "{\"error\":\"" + e.getMessage() + "\"}");
+            }
         } catch (Exception e) {
             e.printStackTrace();
             send(exchange, 500, "{\"error\":\"internal Server Error\"}");

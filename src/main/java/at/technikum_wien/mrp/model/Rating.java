@@ -13,7 +13,7 @@ public class Rating {
     private int id;
     private int mediaId;
     private int userId;
-    private int stars; // 1–5
+    private int stars;
     private String comment;
     private boolean visible;
     private LocalDateTime createdAt;

@@ -1,7 +1,10 @@
 package at.technikum_wien.mrp;
 
 import at.technikum_wien.mrp.api.*;
-import at.technikum_wien.mrp.dao.*;
+import at.technikum_wien.mrp.dao.impl.*;
+import at.technikum_wien.mrp.dao.interfaces.*;
+import at.technikum_wien.mrp.database.DatabaseConnection;
+import at.technikum_wien.mrp.database.DatabaseConnectionIF;
 import at.technikum_wien.mrp.service.*;
 import com.sun.net.httpserver.HttpServer;
 
@@ -37,14 +40,13 @@ public class App {
         server.createContext("/api/users/login", new UserLoginHandler(authService));
 
         // Profil Route
-        server.createContext("/api/users/", new UserProfileHandler(userService, authService));
+        server.createContext("/api/users/", new UserRequestDispatcher(userService, ratingService, mediaService, authService));
 
         // MEDIA
-        server.createContext("/api/media", new MediaHandler(authService, mediaService));
-        server.createContext("/api/media/", new MediaHandler(authService, mediaService)); // wichtig für /api/media/{id}
+        server.createContext("/api/media", new MediaHandler(authService, mediaService, ratingService));
+        server.createContext("/api/media/", new MediaHandler(authService, mediaService, ratingService));
 
         // RATINGS
-        //server.createContext("/api/media/", new RatingHandler(ratingService, authService)); // wichtig für /api/media/{id}/rate
         server.createContext("/api/ratings", new RatingCRUDHandler(ratingService, authService));
         server.createContext("/api/ratings/", new RatingCRUDHandler(ratingService, authService));
 

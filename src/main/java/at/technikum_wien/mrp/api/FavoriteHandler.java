@@ -13,16 +13,14 @@ import java.util.Optional;
 public class FavoriteHandler extends BaseHandler { // 1. Erben
 
     private final MediaService mediaService;
-    // authService und mapper kommen aus BaseHandler
 
     public FavoriteHandler(MediaService mediaService, AuthService authService) {
-        super(authService); // 2. Super-Konstruktor
+        super(authService);
         this.mediaService = mediaService;
     }
 
     @Override
     public void handle(HttpExchange ex) throws IOException {
-        // 3. Preflight Check
         if (isOptionsRequest(ex)) return;
 
         try {
@@ -54,7 +52,7 @@ public class FavoriteHandler extends BaseHandler { // 1. Erben
     }
 
     private void handleGetFavorites(HttpExchange ex) throws IOException {
-        Optional<User> user = getUser(ex); // Aus BaseHandler
+        Optional<User> user = getUser(ex);
         if (user.isEmpty()) {
             send(ex, 401, "{\"error\":\"Unauthorized\"}");
             return;
@@ -70,12 +68,12 @@ public class FavoriteHandler extends BaseHandler { // 1. Erben
             return;
         }
 
-        int mediaId = extractId(ex.getRequestURI().getPath()); // Aus BaseHandler
+        int mediaId = extractId(ex.getRequestURI().getPath());
 
         try {
             if (add) {
                 mediaService.addFavorite(mediaId, user.get().getId());
-                send(ex, 201, "{\"message\":\"Added to favorites\"}");
+                send(ex, 200, "{\"message\":\"Added to favorites\"}");
             } else {
                 mediaService.removeFavorite(mediaId, user.get().getId());
                 send(ex, 204);

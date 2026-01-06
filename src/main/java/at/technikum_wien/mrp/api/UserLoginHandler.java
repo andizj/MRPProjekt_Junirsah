@@ -7,15 +7,13 @@ import java.io.IOException;
 
 public class UserLoginHandler extends BaseHandler { // 1. Erben
 
-    // mapper und authService kommen aus BaseHandler
 
     public UserLoginHandler(AuthService authService) {
-        super(authService); // 2. Super-Konstruktor
+        super(authService);
     }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        // 3. Preflight Check One-Liner
         if (isOptionsRequest(exchange)) return;
 
         if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
