@@ -1,14 +1,15 @@
 package at.technikum_wien.mrp.service;
 
-import at.technikum_wien.mrp.dao.MediaRepositoryIF;
-import at.technikum_wien.mrp.dao.RatingRepositoryIF;
-import at.technikum_wien.mrp.dao.UserRepositoryIF;
+import at.technikum_wien.mrp.dao.interfaces.MediaRepositoryIF;
+import at.technikum_wien.mrp.dao.interfaces.RatingRepositoryIF;
+import at.technikum_wien.mrp.dao.interfaces.UserRepositoryIF;
 import at.technikum_wien.mrp.model.MediaEntry;
 import at.technikum_wien.mrp.model.Rating;
 import at.technikum_wien.mrp.model.User;
 import at.technikum_wien.mrp.model.UserProfileStats;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class UserService {
 
@@ -16,17 +17,12 @@ public class UserService {
     private final RatingRepositoryIF ratingRepo;
     private final MediaRepositoryIF mediaRepo;
 
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+
     public UserService(UserRepositoryIF userRepo, RatingRepositoryIF ratingRepo, MediaRepositoryIF mediaRepo) {
         this.userRepo = userRepo;
         this.ratingRepo = ratingRepo;
         this.mediaRepo = mediaRepo;
-    }
-
-    public User register(User user) {
-        if (userRepo.findByUsername(user.getUsername()).isPresent()) {
-            throw new IllegalArgumentException("Username already exists");
-        }
-        return userRepo.save(user);
     }
 
     public Optional<User> findByUsername(String username) {
@@ -34,15 +30,11 @@ public class UserService {
     }
 
     public UserProfileStats getUserProfile(String username) {
-        // 1. User finden
         User user = userRepo.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        // 2. Einfache Stats aus der DB
         int count = ratingRepo.countRatingsByUserId(user.getId());
         double avg = ratingRepo.getAverageRatingByUserId(user.getId());
-
-        // 3. Lieblingsgenre berechnen
         String favGenre = calculateFavoriteGenre(user.getId());
 
         return new UserProfileStats(user.getUsername(), count, avg, favGenre);
@@ -57,8 +49,10 @@ public class UserService {
         for (Rating r : ratings) {
             Optional<MediaEntry> media = mediaRepo.findById(r.getMediaId());
             if (media.isPresent()) {
-                for (String g : media.get().getGenres()) {
-                    genreCounts.put(g, genreCounts.getOrDefault(g, 0) + 1);
+                if (media.get().getGenres() != null) {
+                    for (String g : media.get().getGenres()) {
+                        genreCounts.put(g, genreCounts.getOrDefault(g, 0) + 1);
+                    }
                 }
             }
         }
@@ -67,5 +61,46 @@ public class UserService {
                 .max(Map.Entry.comparingByValue())
                 .map(Map.Entry::getKey)
                 .orElse("None");
+    }
+
+    public void updateUser(String currentUsername, String newUsername, String newEmail, String newFavoriteGenre) {
+
+        User existingUser = userRepo.findByUsername(currentUsername)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + currentUsername));
+
+        if (newUsername != null && !newUsername.isBlank()) {
+            if (!newUsername.equals(existingUser.getUsername())) {
+                if (userRepo.existsByUsername(newUsername)) {
+                    throw new IllegalArgumentException("Username '" + newUsername + "' is already taken.");
+                }
+                existingUser.setUsername(newUsername);
+            }
+        }
+        if (newEmail != null && !newEmail.isBlank()) {
+            if (!EMAIL_PATTERN.matcher(newEmail).matches()) {
+                throw new IllegalArgumentException("Invalid email format (e.g. user@example.com)");
+            }
+            existingUser.setEmail(newEmail);
+        }
+
+        if (newFavoriteGenre != null && !newFavoriteGenre.isBlank()) {
+            existingUser.setFavoriteGenre(newFavoriteGenre);
+        }
+
+        userRepo.save(existingUser);
+    }
+
+    public UserProfileStats getUserProfile(int userId) {
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        int count = ratingRepo.countRatingsByUserId(user.getId());
+        double avg = ratingRepo.getAverageRatingByUserId(user.getId());
+        String favGenre = calculateFavoriteGenre(user.getId());
+
+        return new UserProfileStats(user.getUsername(), count, avg, favGenre);
+    }
+    public Optional<User> findById(int id) {
+        return userRepo.findById(id);
     }
 }
