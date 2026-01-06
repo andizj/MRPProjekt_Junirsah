@@ -38,8 +38,6 @@ public class App {
         // USER
         server.createContext("/api/users/register", new UserRegisterHandler(authService));
         server.createContext("/api/users/login", new UserLoginHandler(authService));
-
-        // Profil Route
         server.createContext("/api/users/", new UserRequestDispatcher(userService, ratingService, mediaService, authService));
 
         // MEDIA
